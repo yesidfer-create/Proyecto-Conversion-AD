@@ -179,6 +179,23 @@ uicontrol(fig,...
     'Callback',@reproducirReconstruido);
 
 
+%% ============================================================
+% TABLAS SOLICITADAS EN LA SUSTENTACION
+% ============================================================
+
+uicontrol(fig,...
+    'Style','pushbutton',...
+    'String','TABLA 1 - CUANTIFICACION',...
+    'Position',[80 205 170 30],...
+    'Callback',@generarTabla1);
+
+uicontrol(fig,...
+    'Style','pushbutton',...
+    'String','TABLA 2 - MUESTREO',...
+    'Position',[270 205 170 30],...
+    'Callback',@generarTabla2);
+
+
 
 %% ============================================================
 % RESULTADOS
@@ -189,7 +206,7 @@ resultadoTexto = uicontrol(fig,...
     'Style','text',...
     'String','Resultados apareceran aqui',...
     'FontSize',10,...
-    'Position',[40 40 440 160],...
+    'Position',[40 30 440 165],...
     'HorizontalAlignment','left');
 
 
@@ -580,6 +597,123 @@ function reproducirReconstruido(~,~)
 
 end
 
+
+
+
+%% ============================================================
+% TABLA 1 - VARIACION DE NIVELES DE CUANTIFICACION
+% Senal C, Fs de Nyquist
+% ============================================================
+
+function generarTabla1(~,~)
+
+    try
+        nivelesPrueba = [2 4 8 16 32 64 128 256];
+
+        % Para la senal C, generarSenal define fMax = 50 Hz.
+        % Por tanto, Fs de Nyquist = 2*fMax = 100 Hz.
+        [~,~,infoC] = generarSenal('C');
+        FsNyquist = infoC.FsNyquist;
+
+        MSE = zeros(size(nivelesPrueba));
+        SNR = zeros(size(nivelesPrueba));
+
+        for k = 1:length(nivelesPrueba)
+            r = procesarADC('C',FsNyquist,nivelesPrueba(k));
+            MSE(k) = r.MSE;
+            SNR(k) = r.SNR;
+        end
+
+        datos = [nivelesPrueba(:), MSE(:), SNR(:)];
+
+        fTabla = figure(...
+            'Name','Tabla 1 - Variacion de niveles de cuantificacion',...
+            'NumberTitle','off',...
+            'Position',[250 180 650 430]);
+
+        uitable(fTabla,...
+            'Data',datos,...
+            'ColumnName',{'Niveles de cuantificacion','MSE','SNR [dB]'},...
+            'ColumnWidth',{180 180 180},...
+            'Position',[45 205 560 190]);
+
+        axes('Parent',fTabla,'Position',[0.12 0.12 0.78 0.30]);
+        yyaxis left
+        plot(nivelesPrueba,MSE,'-o','LineWidth',1.5);
+        ylabel('MSE');
+
+        yyaxis right
+        plot(nivelesPrueba,SNR,'-s','LineWidth',1.5);
+        ylabel('SNR [dB]');
+
+        xlabel('Niveles de cuantificacion');
+        title(sprintf('Senal C - Fs Nyquist = %.0f Hz',FsNyquist));
+        grid on;
+
+    catch error
+        msgbox(['ERROR TABLA 1: ',error.message]);
+    end
+end
+
+
+%% ============================================================
+% TABLA 2 - VARIACION DE FRECUENCIA DE MUESTREO
+% Senal D, 16 niveles de cuantificacion
+% ============================================================
+
+function generarTabla2(~,~)
+
+    if isempty(archivoAudioActual)
+        msgbox('Cargue primero un archivo de audio para generar la Tabla 2');
+        return;
+    end
+
+    try
+        % fs es la frecuencia de muestreo ORIGINAL del archivo de audio.
+        [~,FsOriginal] = audioread(archivoAudioActual);
+
+        factores = [0.25 0.5 0.75 1 1.25 1.5 1.75 2];
+        frecuencias = factores * FsOriginal;
+        errorEspectral = zeros(size(factores));
+
+        for k = 1:length(factores)
+            r = procesarADC('D',frecuencias(k),16,archivoAudioActual);
+            errorEspectral(k) = r.errorRelativo;
+        end
+
+        etiquetas = {...
+            '0.25 fs'; '0.5 fs'; '0.75 fs'; 'fs';...
+            '1.25 fs'; '1.5 fs'; '1.75 fs'; '2 fs'};
+
+        datos = cell(length(factores),3);
+        for k = 1:length(factores)
+            datos{k,1} = etiquetas{k};
+            datos{k,2} = frecuencias(k);
+            datos{k,3} = errorEspectral(k);
+        end
+
+        fTabla = figure(...
+            'Name','Tabla 2 - Variacion de frecuencia de muestreo',...
+            'NumberTitle','off',...
+            'Position',[250 180 700 440]);
+
+        uitable(fTabla,...
+            'Data',datos,...
+            'ColumnName',{'Frecuencia','Fs [Hz]','Error espectral'},...
+            'ColumnWidth',{130 180 200},...
+            'Position',[55 210 590 195]);
+
+        axes('Parent',fTabla,'Position',[0.12 0.12 0.80 0.30]);
+        plot(frecuencias,errorEspectral,'-o','LineWidth',1.5);
+        grid on;
+        xlabel('Frecuencia de muestreo [Hz]');
+        ylabel('Error espectral');
+        title(sprintf('Senal D - 16 niveles - fs original = %.0f Hz',FsOriginal));
+
+    catch error
+        msgbox(['ERROR TABLA 2: ',error.message]);
+    end
+end
 
 
 end
