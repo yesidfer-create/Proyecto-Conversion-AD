@@ -68,6 +68,11 @@ if tipoSenal == "D"
 
     info.FsAudio = Fs_original;
 
+    % Informacion de cuantificacion original del archivo WAV
+    datosAudio = audioinfo(archivoAudio);
+    info.BitsPorMuestra = datosAudio.BitsPerSample;
+    info.NOriginal = 2^info.BitsPorMuestra;
+
 
 
 else
@@ -173,28 +178,81 @@ end
     muestrasCuant);
 
 
+% Para la senal D tambien se calculan MSE y SQNR usando como
+% referencia el numero de niveles original indicado por el WAV.
+% Se usa una formula directa para evitar crear millones de niveles.
+MSEOriginal = [];
+SNROriginal = [];
+errorRelativoOriginal = [];
+
+if tipoSenal == "D"
+
+    muestrasCuantOriginal = cuantificarOriginalRapida(...
+        senalProcesada,...
+        info.NOriginal);
+
+    [MSEOriginal,SNROriginal,~] = ...
+        calcularMetricas(...
+        senalProcesada,...
+        muestrasCuantOriginal);
+
+end
+
 
 
 %% ============================================================
-% ESPECTROS
+% ESPECTROS PARA COMPARAR ORIGINAL VS RECONSTRUIDA
 % ============================================================
+
+
+if tipoSenal == "D"
+
+    % La senal reconstruida permanece a la Fs seleccionada por el usuario.
+    % Solo para calcular el error espectral se lleva temporalmente a la
+    % frecuencia de muestreo original del archivo WAV.
+    senalReconComparacion = resample(senalRecon,...
+                                     info.FsAudio,...
+                                     Fs);
+
+    % Igualar longitudes temporales antes de calcular las FFT.
+    longitudTemporal = min(length(senal),...
+                           length(senalReconComparacion));
+
+    senalOriginalComparacion = senal(1:longitudTemporal);
+    senalReconComparacion = senalReconComparacion(1:longitudTemporal);
+
+    FsComparacion = info.FsAudio;
+
+else
+
+    % Para A, B y C la senal original y la reconstruida estan definidas
+    % sobre el vector temporal de referencia generado a FsReferencia.
+    longitudTemporal = min(length(senal),...
+                           length(senalRecon));
+
+    senalOriginalComparacion = senal(1:longitudTemporal);
+    senalReconComparacion = senalRecon(1:longitudTemporal);
+
+    FsComparacion = info.FsReferencia;
+
+end
 
 
 [f,Xoriginal] = ...
     calcularEspectro(...
-    senalProcesada,...
-    Fs);
+    senalOriginalComparacion,...
+    FsComparacion);
 
 
 
 [~,Xreconstruida] = ...
     calcularEspectro(...
-    senalRecon,...
-    Fs);
+    senalReconComparacion,...
+    FsComparacion);
 
 
 
-% Ajustar longitudes
+% Por seguridad, igualar las longitudes de los espectros.
 
 longitudMinima = min(length(Xoriginal),...
                      length(Xreconstruida));
@@ -221,6 +279,44 @@ f = f(1:longitudMinima);
     Xreconstruida);
 
 
+% Para la senal D, calcular tambien el error espectral usando
+% los niveles originales de cuantificacion del archivo WAV.
+if tipoSenal == "D"
+
+    senalReconOriginalComparacion = resample(muestrasCuantOriginal,...
+                                              info.FsAudio,...
+                                              Fs);
+
+    longitudOriginal = min(length(senal),...
+                           length(senalReconOriginalComparacion));
+
+    senalOriginalErrorOriginal = senal(1:longitudOriginal);
+    senalReconOriginalComparacion = ...
+        senalReconOriginalComparacion(1:longitudOriginal);
+
+    [~,XoriginalParaOriginal] = ...
+        calcularEspectro(senalOriginalErrorOriginal,...
+                         info.FsAudio);
+
+    [~,XreconOriginal] = ...
+        calcularEspectro(senalReconOriginalComparacion,...
+                         info.FsAudio);
+
+    longitudEspectralOriginal = min(length(XoriginalParaOriginal),...
+                                    length(XreconOriginal));
+
+    XoriginalParaOriginal = ...
+        XoriginalParaOriginal(1:longitudEspectralOriginal);
+
+    XreconOriginal = ...
+        XreconOriginal(1:longitudEspectralOriginal);
+
+    [~,errorRelativoOriginal] = ...
+        calcularErrorEspectral(XoriginalParaOriginal,...
+                               XreconOriginal);
+
+end
+
 
 
 %% ============================================================
@@ -237,6 +333,8 @@ resultado.archivoAudio = archivoAudio;
 
 
 resultado.Fs = Fs;
+
+resultado.FsComparacion = FsComparacion;
 
 resultado.N = N;
 
@@ -280,6 +378,12 @@ resultado.MSE = MSE;
 
 resultado.SNR = SNR;
 
+resultado.MSEOriginal = MSEOriginal;
+
+resultado.SNROriginal = SNROriginal;
+
+resultado.errorRelativoOriginal = errorRelativoOriginal;
+
 
 
 % Espectros
@@ -301,5 +405,32 @@ resultado.errorRelativo = errorRelativo;
 resultado.pasoCuantificacion = infoQ.paso;
 
 
+
+end
+
+
+%% ============================================================
+% CUANTIFICACION UNIFORME RAPIDA PARA N ORIGINAL DEL WAV
+% ============================================================
+
+function xq = cuantificarOriginalRapida(x,N)
+
+xmin = min(x);
+xmax = max(x);
+
+if xmax == xmin
+    xq = x;
+    return;
+end
+
+paso = (xmax-xmin)/(N-1);
+
+indice = round((x-xmin)/paso);
+
+% Limitar por seguridad al rango valido de indices.
+indice(indice < 0) = 0;
+indice(indice > N-1) = N-1;
+
+xq = xmin + indice*paso;
 
 end

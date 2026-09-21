@@ -1,252 +1,106 @@
 function generarGraficas(resultado)
 
-% GENERARGRAFICAS Genera graficas del proceso ADC
+% GENERARGRAFICAS Genera unicamente las graficas solicitadas por el proyecto ADC
 %
 % Entrada:
-% resultado -> estructura generada por procesarADC
-
+%   resultado -> estructura generada por procesarADC
 
 %% ============================================================
 % EXTRAER INFORMACION
 % ============================================================
 
-
 tipo = resultado.tipo;
 
-
 senal = resultado.senalOriginal;
-
 senalRecon = resultado.senalReconstruida;
 
-
 muestras = resultado.muestras;
-
 muestrasCuant = resultado.muestrasCuantificadas;
 
-
 t = resultado.tOriginal;
-
 tm = resultado.tMuestreo;
-
 tRecon = resultado.tRecon;
 
-
 f = resultado.f;
-
 Xoriginal = resultado.Xoriginal;
-
-Xreconstruida = resultado.Xreconstruida;
-
-
-errorEspectral = resultado.errorEspectral;
-
 
 Fs = resultado.Fs;
 
-
-
 %% ============================================================
-% FRAGMENTO DE VISUALIZACION
+% NOTA PARA AUDIO
 % ============================================================
-
 
 if tipo == "D"
-
-    muestrasMostrar = min(round(0.05*Fs),length(senal));
-
-else
-
-    muestrasMostrar = length(senal);
-
+    msgbox('Para la señal de audio no se muestran gráficas en esta versión.');
+    return;
 end
 
-
-
 %% ============================================================
-% 1. SENAL ORIGINAL
+% 1. SEÑAL ORIGINAL EN EL TIEMPO
 % ============================================================
 
-
 figure;
-
-plot(t,senal,'LineWidth',1.5);
-
+plot(t, senal, 'LineWidth', 1.5);
 grid on;
-
 xlabel('Tiempo [s]');
-
 ylabel('Amplitud');
-
-title('Senal original');
-
-
+title('Señal original');
 
 %% ============================================================
-% 2. ESPECTRO ORIGINAL
+% 2. ESPECTRO DE LA SEÑAL ORIGINAL
 % ============================================================
 
-
 figure;
-
-plot(f,Xoriginal,'LineWidth',1.5);
-
+plot(f, Xoriginal, 'LineWidth', 1.5);
 grid on;
-
 xlabel('Frecuencia [Hz]');
-
 ylabel('|X(f)|');
-
-title('Espectro senal original');
-
-
+title('Espectro de la señal original');
 
 %% ============================================================
-% 3. SENAL MUESTREADA
+% 3. SEÑAL MUESTREADA EN EL TIEMPO
 % ============================================================
 
-
 figure;
-
-stem(tm,muestras,'filled');
-
+stem(tm, muestras, 'filled');
 grid on;
-
 xlabel('Tiempo [s]');
-
 ylabel('Amplitud');
-
-title('Senal muestreada');
-
-
+title('Señal muestreada');
 
 %% ============================================================
-% 4. ESPECTRO SENAL MUESTREADA
+% 4. ESPECTRO DE LA SEÑAL MUESTREADA
 % ============================================================
 
-
-[fM,Xm] = calcularEspectro(muestras,Fs);
-
+[fM, Xm] = calcularEspectro(muestras, Fs);
 
 figure;
-
-plot(fM,Xm,'LineWidth',1.5);
-
+plot(fM, Xm, 'LineWidth', 1.5);
 grid on;
-
 xlabel('Frecuencia [Hz]');
-
 ylabel('|Xm(f)|');
-
-title('Espectro senal muestreada');
-
-
+title('Espectro de la señal muestreada');
 
 %% ============================================================
-% 5. SENAL CUANTIFICADA
+% 5. SEÑAL CUANTIFICADA
 % ============================================================
 
-
 figure;
-
-stem(tm,muestrasCuant,'filled');
-
+stem(tm, muestrasCuant, 'filled');
 grid on;
-
 xlabel('Tiempo [s]');
-
 ylabel('Amplitud');
-
-title('Senal cuantificada');
-
-
+title('Señal cuantificada');
 
 %% ============================================================
-% 6. SENAL RECONSTRUIDA
+% 6. SEÑAL RECONSTRUIDA
 % ============================================================
 
-
 figure;
-
-plot(tRecon,senalRecon,'LineWidth',1.5);
-
+plot(tRecon, senalRecon, 'LineWidth', 1.5);
 grid on;
-
 xlabel('Tiempo [s]');
-
 ylabel('Amplitud');
-
-title('Senal reconstruida');
-
-
-
-%% ============================================================
-% 7. ERROR DE CUANTIFICACION
-% ============================================================
-
-
-errorCuant = muestras - muestrasCuant;
-
-
-figure;
-
-stem(tm,errorCuant,'filled');
-
-grid on;
-
-xlabel('Tiempo [s]');
-
-ylabel('Error');
-
-title('Error de cuantificacion');
-
-
-
-%% ============================================================
-% 8. COMPARACION ESPECTRAL
-% ============================================================
-
-
-figure;
-
-plot(f,Xoriginal,...
-    'LineWidth',1.5);
-
-hold on;
-
-plot(f,Xreconstruida,...
-    'LineWidth',1.5);
-
-
-grid on;
-
-xlabel('Frecuencia [Hz]');
-
-ylabel('|X(f)|');
-
-title('Comparacion espectral');
-
-legend('Original','Reconstruida');
-
-
-
-%% ============================================================
-% 9. ERROR ESPECTRAL
-% ============================================================
-
-
-figure;
-
-plot(f,errorEspectral,...
-    'LineWidth',1.5);
-
-
-grid on;
-
-xlabel('Frecuencia [Hz]');
-
-ylabel('Error');
-
-title('Error espectral');
-
+title('Señal reconstruida');
 
 end
